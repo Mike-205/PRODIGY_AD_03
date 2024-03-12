@@ -2,11 +2,42 @@ import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
 
+enum StopwatchState {
+  initial,
+  running,
+  paused,
+}
+
 class StopWatchProvider with ChangeNotifier{
   final Stopwatch _stopwatch = Stopwatch();
   Timer? _timer;
   Duration _elapsedTime = Duration.zero;
   final List<Duration> _laps = [];
+  StopwatchState _currentState = StopwatchState.initial;
+
+  StopwatchState get currentState => _currentState;
+
+  String get startButtonText {
+    switch (_currentState) {
+      case StopwatchState.initial:
+        return 'Start';
+      case StopwatchState.running:
+        return 'Stop';
+      case StopwatchState.paused:
+        return 'Resume';
+    }
+  }
+
+  String get lapButtonText {
+    switch (_currentState) {
+      case StopwatchState.initial:
+        return 'Lap';
+      case StopwatchState.paused:
+        return 'Reset';
+      case StopwatchState.running:
+        return 'Lap';
+    }
+  }
 
   StopWatchProvider() {
     _timer = Timer.periodic(const Duration(milliseconds: 100), _onTick);
@@ -23,23 +54,32 @@ class StopWatchProvider with ChangeNotifier{
     final hours = _elapsedTime.inHours.toString().padLeft(2, '0');
     final minutes = (_elapsedTime.inMinutes % 60).toString().padLeft(2, '0');
     final seconds = (_elapsedTime.inSeconds % 60).toString().padLeft(2, '0');
-    final milliseconds = ((_elapsedTime.inMilliseconds % 1000) / 100).floor().toString().padLeft(1, '0');
+    final milliseconds = ((_elapsedTime.inMilliseconds % 1000) / 10).floor().toString().padLeft(2, '0');
     return '$hours:$minutes:$seconds.$milliseconds';
   }
 
   void start (){
-    _stopwatch.start();
-    notifyListeners();
+    if (_currentState == StopwatchState.initial || _currentState == StopwatchState.paused) {
+      _stopwatch.start();
+      _currentState = StopwatchState.running;
+      notifyListeners();
+    }
   }
 
   void stop (){
-    _stopwatch.stop();
-    notifyListeners();
+    if (_currentState == StopwatchState.running) {
+      _stopwatch.stop();
+      _currentState = StopwatchState.paused;
+      notifyListeners();
+    }
   }
 
   void resume (){
-    _stopwatch.start();
-    notifyListeners();
+    if (_currentState == StopwatchState.paused) {
+      _stopwatch.start();
+      _currentState = StopwatchState.running;
+      notifyListeners();
+    }
   }
 
   List<Duration> get laps => _laps;
@@ -53,7 +93,9 @@ class StopWatchProvider with ChangeNotifier{
 
   void reset (){
     _stopwatch.reset();
+    _currentState = StopwatchState.initial;
     _elapsedTime = Duration.zero;
+    _laps.clear();
     notifyListeners();
   }
 }
